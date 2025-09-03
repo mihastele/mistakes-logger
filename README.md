@@ -23,6 +23,31 @@ A comprehensive web application for tracking, analyzing, and learning from mista
 - **CORS Protection**: Properly configured cross-origin resource sharing
 - **Input Validation**: Comprehensive server-side validation and sanitization
 
+## Authentication
+
+The application uses bearer token authentication to secure API endpoints. Users must authenticate before they can add, edit, or delete mistakes.
+
+### For Administrators
+
+1. **Generate Token**: Use `php/generate_token.php` to create a secure bearer token
+2. **Configure**: Copy the token to `php/auth.php` (use `php/auth.sample.php` as template)
+3. **Distribute**: Share the token securely with authorized users
+
+### For Users
+
+1. **Get Token**: Obtain the bearer token from your administrator
+2. **Authenticate**: Use one of these methods:
+   - **File Upload**: Create a text file containing the token and upload it
+   - **Manual Entry**: Enter the token directly in the authentication modal
+3. **Use App**: Once authenticated, the token is saved locally for future sessions
+
+### Security Features
+
+- Tokens are stored securely in browser localStorage
+- All modification requests require valid authentication
+- Read-only access (viewing mistakes) doesn't require authentication
+- CORS headers properly configured for secure cross-origin requests
+
 ## Technology Stack
 
 - **Frontend**: HTML5, CSS3, JavaScript (ES6+)
