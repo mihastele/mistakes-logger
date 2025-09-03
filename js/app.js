@@ -1,8 +1,14 @@
 // Global variables
 let mistakes = [];
+let allMistakes = []; // Store all mistakes for pagination
 let editingId = null;
 let bearerToken = null;
 let isAuthenticated = false;
+let currentPage = 1;
+let itemsPerPage = 10;
+let totalPages = 1;
+let currentSearchTerm = '';
+let currentStatusFilter = 'all';
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function () {
@@ -31,7 +37,9 @@ async function loadMistakes() {
         const data = await response.json();
 
         if (data.success) {
-            mistakes = data.mistakes;
+            allMistakes = data.data?.mistakes || data.mistakes || [];
+            mistakes = allMistakes;
+            setupPagination();
             renderMistakes();
             updateStats();
         } else {
@@ -50,22 +58,27 @@ function renderMistakes() {
     const tbody = document.getElementById('mistakesTableBody');
     const emptyState = document.getElementById('emptyState');
     const tableContainer = document.querySelector('.table-container');
-
-    if (mistakes.length === 0) {
+    
+    if (allMistakes.length === 0) {
         emptyState.style.display = 'block';
         tableContainer.style.display = 'none';
         return;
     }
-
+    
     emptyState.style.display = 'none';
     tableContainer.style.display = 'block';
-
-    tbody.innerHTML = mistakes.map(mistake => `
+    
+    // Get current page data
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentMistakes = mistakes.slice(startIndex, endIndex);
+    
+    tbody.innerHTML = currentMistakes.map(mistake => `
         <tr>
             <td>${formatDate(mistake.mistake_date)}</td>
             <td class="text-cell" title="${escapeHtml(mistake.mistake_issue)}">${escapeHtml(mistake.mistake_issue)}</td>
             <td class="text-cell" title="${escapeHtml(mistake.context_situation)}">${escapeHtml(mistake.context_situation)}</td>
-            <td class="text-cell" title="${escapeHtml(mistake.mentor_feedback)}">${escapeHtml(mistake.mentor_feedback)}</td>
+            <td class="text-cell" title="${escapeHtml(mistake.mentor_feedback || '')}">${escapeHtml(mistake.mentor_feedback || '')}</td>
             <td class="text-cell" title="${escapeHtml(mistake.what_learned)}">${escapeHtml(mistake.what_learned)}</td>
             <td class="text-cell" title="${escapeHtml(mistake.plan_improve)}">${escapeHtml(mistake.plan_improve)}</td>
             <td><span class="status-badge ${getStatusClass(mistake.status)}">${mistake.status}</span></td>
@@ -81,14 +94,97 @@ function renderMistakes() {
             </td>
         </tr>
     `).join('');
+    
+    updatePaginationInfo();
+}
+
+// Setup pagination
+function setupPagination() {
+    totalPages = Math.ceil(mistakes.length / itemsPerPage);
+    currentPage = Math.min(currentPage, Math.max(1, totalPages));
+    renderPaginationControls();
+}
+
+// Render pagination controls
+function renderPaginationControls() {
+    const paginationContainer = document.getElementById('paginationContainer');
+    if (!paginationContainer) return;
+    
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    paginationContainer.style.display = 'flex';
+    
+    let paginationHTML = `
+        <button class="btn btn-secondary btn-small" onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>
+            <i class="fas fa-angle-double-left"></i>
+        </button>
+        <button class="btn btn-secondary btn-small" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+            <i class="fas fa-angle-left"></i>
+        </button>
+    `;
+    
+    // Show page numbers
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        paginationHTML += `
+            <button class="btn ${i === currentPage ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="goToPage(${i})">
+                ${i}
+            </button>
+        `;
+    }
+    
+    paginationHTML += `
+        <button class="btn btn-secondary btn-small" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+            <i class="fas fa-angle-right"></i>
+        </button>
+        <button class="btn btn-secondary btn-small" onclick="goToPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>
+            <i class="fas fa-angle-double-right"></i>
+        </button>
+    `;
+    
+    paginationContainer.innerHTML = paginationHTML;
+}
+
+// Change items per page
+function changeItemsPerPage() {
+    const select = document.getElementById('itemsPerPage');
+    itemsPerPage = parseInt(select.value);
+    currentPage = 1; // Reset to first page
+    setupPagination();
+    renderMistakes();
+}
+
+// Go to specific page
+function goToPage(page) {
+    if (page >= 1 && page <= totalPages) {
+        currentPage = page;
+        renderMistakes();
+        renderPaginationControls();
+    }
+}
+
+// Update pagination info
+function updatePaginationInfo() {
+    const infoElement = document.getElementById('paginationInfo');
+    if (!infoElement) return;
+    
+    const startItem = ((currentPage - 1) * itemsPerPage) + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, mistakes.length);
+    
+    infoElement.textContent = `Showing ${startItem}-${endItem} of ${mistakes.length} mistakes`;
 }
 
 // Update statistics
 function updateStats() {
-    const total = mistakes.length;
-    const resolved = mistakes.filter(m => m.status === 'Resolved').length;
+    const total = allMistakes.length;
+    const resolved = allMistakes.filter(m => m.status === 'Resolved').length;
     const progressRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
-
+    
     document.getElementById('totalMistakes').textContent = total;
     document.getElementById('resolvedMistakes').textContent = resolved;
     document.getElementById('progressRate').textContent = progressRate + '%';
@@ -105,7 +201,7 @@ function showAddForm() {
 
 // Edit mistake
 function editMistake(id) {
-    const mistake = mistakes.find(m => m.id === id);
+    const mistake = allMistakes.find(m => m.id === id);
     if (!mistake) return;
 
     editingId = id;
@@ -200,47 +296,63 @@ async function handleFormSubmit(e) {
     }
 }
 
-// Filter mistakes
-function filterMistakes() {
-    const statusFilter = document.getElementById('statusFilter').value;
-
-    // Show all mistakes if "all" is selected
-    if (statusFilter === 'all') {
-        renderMistakes();
-        return;
-    }
-
-    // Filter mistakes by status
-    const filteredMistakes = mistakes.filter(mistake => mistake.status === statusFilter);
-
-    // Temporarily update the mistakes array for rendering
-    const originalMistakes = mistakes;
-    mistakes = filteredMistakes;
-    renderMistakes();
-    mistakes = originalMistakes; // Restore original array
+// Search mistakes
+function searchMistakes() {
+    currentSearchTerm = document.getElementById('searchInput').value.toLowerCase();
+    applyFilters();
 }
 
-// Show weekly review
+// Filter mistakes
+function filterMistakes() {
+    currentStatusFilter = document.getElementById('statusFilter').value;
+    applyFilters();
+}
+
+// Apply both search and status filters
+function applyFilters() {
+    let filteredMistakes = allMistakes;
+    
+    // Apply search filter
+    if (currentSearchTerm) {
+        filteredMistakes = filteredMistakes.filter(mistake => 
+            mistake.mistake_issue.toLowerCase().includes(currentSearchTerm) ||
+            mistake.context_situation.toLowerCase().includes(currentSearchTerm) ||
+            mistake.what_learned.toLowerCase().includes(currentSearchTerm) ||
+            mistake.plan_improve.toLowerCase().includes(currentSearchTerm) ||
+            (mistake.mentor_feedback && mistake.mentor_feedback.toLowerCase().includes(currentSearchTerm))
+        );
+    }
+    
+    // Apply status filter
+    if (currentStatusFilter !== 'all') {
+        filteredMistakes = filteredMistakes.filter(mistake => mistake.status === currentStatusFilter);
+    }
+    
+    mistakes = filteredMistakes;
+    
+    // Reset to first page when filtering
+    currentPage = 1;
+    setupPagination();
+    renderMistakes();
+}// Show weekly review
 function showWeeklyReview() {
     const reviewContent = document.getElementById('reviewContent');
 
     // Get mistakes from the last week
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-
-    const recentMistakes = mistakes.filter(mistake =>
+    
+    const recentMistakes = allMistakes.filter(mistake => 
         new Date(mistake.mistake_date) >= oneWeekAgo
     );
-
+    
     // Find patterns (group by similar issues)
-    const patterns = findPatterns(mistakes);
-
+    const patterns = findPatterns(allMistakes);
+    
     // Find recently resolved mistakes
-    const recentlyResolved = mistakes.filter(mistake =>
+    const recentlyResolved = allMistakes.filter(mistake => 
         mistake.status === 'Resolved' && new Date(mistake.mistake_date) >= oneWeekAgo
-    );
-
-    let reviewHtml = `
+    );    let reviewHtml = `
         <div class="review-section">
             <h3><i class="fas fa-calendar-week"></i> This Week's Activity</h3>
             <p><strong>${recentMistakes.length}</strong> mistakes logged this week</p>

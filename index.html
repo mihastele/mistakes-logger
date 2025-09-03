@@ -44,24 +44,26 @@
         </div>
       </div>
 
-      <div class="action-bar">
-        <button class="btn btn-primary" onclick="showAddForm()">
-          <i class="fas fa-plus"></i> Log New Mistake
-        </button>
-        <button class="btn btn-secondary" onclick="showWeeklyReview()">
-          <i class="fas fa-calendar-week"></i> Weekly Review
-        </button>
-        <div class="filter-group">
-          <select id="statusFilter" onchange="filterMistakes()">
-            <option value="all">All Status</option>
-            <option value="In progress">In Progress</option>
-            <option value="Resolved">Resolved</option>
-            <option value="Ongoing">Ongoing</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Add/Edit Form Modal -->
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddForm()">
+                <i class="fas fa-plus"></i> Log New Mistake
+            </button>
+            <button class="btn btn-secondary" onclick="showWeeklyReview()">
+                <i class="fas fa-calendar-week"></i> Weekly Review
+            </button>
+            <div class="search-group">
+                <input type="text" id="searchInput" placeholder="Search mistakes..." onkeyup="searchMistakes()">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+            <div class="filter-group">
+                <select id="statusFilter" onchange="filterMistakes()">
+                    <option value="all">All Status</option>
+                    <option value="In progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Ongoing">Ongoing</option>
+                </select>
+            </div>
+        </div>      <!-- Add/Edit Form Modal -->
       <div id="formModal" class="modal">
         <div class="modal-content">
           <div class="modal-header">
@@ -257,28 +259,45 @@
         </div>
       </div>
 
-      <!-- Mistakes Table -->
-      <div class="table-container">
-        <table class="mistakes-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Mistake/Issue</th>
-              <th>Context</th>
-              <th>Mentor Feedback</th>
-              <th>What I Learned</th>
-              <th>Plan to Improve</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="mistakesTableBody">
-            <!-- Table rows will be populated by JavaScript -->
-          </tbody>
-        </table>
-      </div>
-
-      <div id="emptyState" class="empty-state" style="display: none">
+        <!-- Mistakes Table -->
+        <div class="table-container">
+            <div class="table-header">
+                <div class="table-info">
+                    <span id="paginationInfo">Showing 1-10 of 0 mistakes</span>
+                </div>
+                <div class="items-per-page">
+                    <label for="itemsPerPage">Items per page:</label>
+                    <select id="itemsPerPage" onchange="changeItemsPerPage()">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+            </div>
+            
+            <table class="mistakes-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Mistake/Issue</th>
+                        <th>Context</th>
+                        <th>Mentor Feedback</th>
+                        <th>What I Learned</th>
+                        <th>Plan to Improve</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="mistakesTableBody">
+                    <!-- Table rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+            
+            <div class="pagination-container" id="paginationContainer" style="display: none;">
+                <!-- Pagination controls will be populated by JavaScript -->
+            </div>
+        </div>      <div id="emptyState" class="empty-state" style="display: none">
         <i class="fas fa-lightbulb"></i>
         <h3>No mistakes logged yet!</h3>
         <p>
