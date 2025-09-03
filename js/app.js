@@ -135,7 +135,7 @@ async function deleteMistake(id) {
 
         const response = await fetch('php/api.php', {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: getAuthHeaders(true), // true for FormData
             body: formData
         });
 
@@ -178,7 +178,7 @@ async function handleFormSubmit(e) {
     try {
         const response = await fetch('php/api.php', {
             method: 'POST',
-            headers: getAuthHeaders(),
+            headers: getAuthHeaders(true), // true for FormData
             body: formData
         });
 
@@ -358,10 +358,13 @@ function clearToken() {
     updateAuthStatus();
 }
 
-function getAuthHeaders() {
-    const headers = {
-        'Content-Type': 'application/json'
-    };
+function getAuthHeaders(isFormData = false) {
+    const headers = {};
+
+    // Don't set Content-Type for FormData requests - let browser handle it
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
 
     if (bearerToken) {
         headers['Authorization'] = `Bearer ${bearerToken}`;
