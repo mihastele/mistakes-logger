@@ -58,21 +58,21 @@ function renderMistakes() {
     const tbody = document.getElementById('mistakesTableBody');
     const emptyState = document.getElementById('emptyState');
     const tableContainer = document.querySelector('.table-container');
-    
+
     if (allMistakes.length === 0) {
         emptyState.style.display = 'block';
         tableContainer.style.display = 'none';
         return;
     }
-    
+
     emptyState.style.display = 'none';
     tableContainer.style.display = 'block';
-    
+
     // Get current page data
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentMistakes = mistakes.slice(startIndex, endIndex);
-    
+
     tbody.innerHTML = currentMistakes.map(mistake => `
         <tr>
             <td>${formatDate(mistake.mistake_date)}</td>
@@ -94,7 +94,7 @@ function renderMistakes() {
             </td>
         </tr>
     `).join('');
-    
+
     updatePaginationInfo();
 }
 
@@ -109,14 +109,14 @@ function setupPagination() {
 function renderPaginationControls() {
     const paginationContainer = document.getElementById('paginationContainer');
     if (!paginationContainer) return;
-    
+
     if (totalPages <= 1) {
         paginationContainer.style.display = 'none';
         return;
     }
-    
+
     paginationContainer.style.display = 'flex';
-    
+
     let paginationHTML = `
         <button class="btn btn-secondary btn-small" onclick="goToPage(1)" ${currentPage === 1 ? 'disabled' : ''}>
             <i class="fas fa-angle-double-left"></i>
@@ -125,11 +125,11 @@ function renderPaginationControls() {
             <i class="fas fa-angle-left"></i>
         </button>
     `;
-    
+
     // Show page numbers
     const startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, currentPage + 2);
-    
+
     for (let i = startPage; i <= endPage; i++) {
         paginationHTML += `
             <button class="btn ${i === currentPage ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="goToPage(${i})">
@@ -137,7 +137,7 @@ function renderPaginationControls() {
             </button>
         `;
     }
-    
+
     paginationHTML += `
         <button class="btn btn-secondary btn-small" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
             <i class="fas fa-angle-right"></i>
@@ -146,7 +146,7 @@ function renderPaginationControls() {
             <i class="fas fa-angle-double-right"></i>
         </button>
     `;
-    
+
     paginationContainer.innerHTML = paginationHTML;
 }
 
@@ -172,10 +172,10 @@ function goToPage(page) {
 function updatePaginationInfo() {
     const infoElement = document.getElementById('paginationInfo');
     if (!infoElement) return;
-    
+
     const startItem = ((currentPage - 1) * itemsPerPage) + 1;
     const endItem = Math.min(currentPage * itemsPerPage, mistakes.length);
-    
+
     infoElement.textContent = `Showing ${startItem}-${endItem} of ${mistakes.length} mistakes`;
 }
 
@@ -184,7 +184,7 @@ function updateStats() {
     const total = allMistakes.length;
     const resolved = allMistakes.filter(m => m.status === 'Resolved').length;
     const progressRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
-    
+
     document.getElementById('totalMistakes').textContent = total;
     document.getElementById('resolvedMistakes').textContent = resolved;
     document.getElementById('progressRate').textContent = progressRate + '%';
@@ -311,10 +311,10 @@ function filterMistakes() {
 // Apply both search and status filters
 function applyFilters() {
     let filteredMistakes = allMistakes;
-    
+
     // Apply search filter
     if (currentSearchTerm) {
-        filteredMistakes = filteredMistakes.filter(mistake => 
+        filteredMistakes = filteredMistakes.filter(mistake =>
             mistake.mistake_issue.toLowerCase().includes(currentSearchTerm) ||
             mistake.context_situation.toLowerCase().includes(currentSearchTerm) ||
             mistake.what_learned.toLowerCase().includes(currentSearchTerm) ||
@@ -322,14 +322,14 @@ function applyFilters() {
             (mistake.mentor_feedback && mistake.mentor_feedback.toLowerCase().includes(currentSearchTerm))
         );
     }
-    
+
     // Apply status filter
     if (currentStatusFilter !== 'all') {
         filteredMistakes = filteredMistakes.filter(mistake => mistake.status === currentStatusFilter);
     }
-    
+
     mistakes = filteredMistakes;
-    
+
     // Reset to first page when filtering
     currentPage = 1;
     setupPagination();
@@ -341,18 +341,18 @@ function showWeeklyReview() {
     // Get mistakes from the last week
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
-    const recentMistakes = allMistakes.filter(mistake => 
+
+    const recentMistakes = allMistakes.filter(mistake =>
         new Date(mistake.mistake_date) >= oneWeekAgo
     );
-    
+
     // Find patterns (group by similar issues)
     const patterns = findPatterns(allMistakes);
-    
+
     // Find recently resolved mistakes
-    const recentlyResolved = allMistakes.filter(mistake => 
+    const recentlyResolved = allMistakes.filter(mistake =>
         mistake.status === 'Resolved' && new Date(mistake.mistake_date) >= oneWeekAgo
-    );    let reviewHtml = `
+    ); let reviewHtml = `
         <div class="review-section">
             <h3><i class="fas fa-calendar-week"></i> This Week's Activity</h3>
             <p><strong>${recentMistakes.length}</strong> mistakes logged this week</p>
