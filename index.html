@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mistake Tracker - Learn & Grow</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1><i class="fas fa-chart-line"></i> Mistake Tracker</h1>
+            <p class="subtitle">Transform mistakes into growth opportunities</p>
+        </header>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-number" id="totalMistakes">0</div>
+                <div class="stat-label">Total Logged</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="resolvedMistakes">0</div>
+                <div class="stat-label">Resolved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="progressRate">0%</div>
+                <div class="stat-label">Progress Rate</div>
+            </div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn btn-primary" onclick="showAddForm()">
+                <i class="fas fa-plus"></i> Log New Mistake
+            </button>
+            <button class="btn btn-secondary" onclick="showWeeklyReview()">
+                <i class="fas fa-calendar-week"></i> Weekly Review
+            </button>
+            <div class="filter-group">
+                <select id="statusFilter" onchange="filterMistakes()">
+                    <option value="all">All Status</option>
+                    <option value="In progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Ongoing">Ongoing</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Add/Edit Form Modal -->
+        <div id="formModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="formTitle">Log New Mistake</h2>
+                    <span class="close" onclick="closeModal()">&times;</span>
+                </div>
+                <form id="mistakeForm">
+                    <input type="hidden" id="mistakeId" value="">
+                    
+                    <div class="form-group">
+                        <label for="mistake_date">Date:</label>
+                        <input type="date" id="mistake_date" name="mistake_date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mistake_issue">Mistake/Issue:</label>
+                        <textarea id="mistake_issue" name="mistake_issue" rows="3" placeholder="Be honest but not harsh. Just name it." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="context_situation">Context/Situation:</label>
+                        <textarea id="context_situation" name="context_situation" rows="3" placeholder="What were you working on? What led to it?" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="mentor_feedback">Mentor Feedback:</label>
+                        <textarea id="mentor_feedback" name="mentor_feedback" rows="3" placeholder="Capture the exact advice—they're gold nuggets."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="what_learned">What I Learned:</label>
+                        <textarea id="what_learned" name="what_learned" rows="3" placeholder="Your personal insight. This is where ego turns into wisdom." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="plan_improve">Plan to Improve:</label>
+                        <textarea id="plan_improve" name="plan_improve" rows="3" placeholder="Concrete steps. Even tiny ones count." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="status">Status:</label>
+                        <select id="status" name="status" required>
+                            <option value="In progress">In Progress</option>
+                            <option value="Resolved">Resolved ✅</option>
+                            <option value="Ongoing">Ongoing</option>
+                        </select>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Mistake</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Weekly Review Modal -->
+        <div id="reviewModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Weekly Review</h2>
+                    <span class="close" onclick="closeReviewModal()">&times;</span>
+                </div>
+                <div id="reviewContent">
+                    <!-- Review content will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Mistakes Table -->
+        <div class="table-container">
+            <table class="mistakes-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Mistake/Issue</th>
+                        <th>Context</th>
+                        <th>Mentor Feedback</th>
+                        <th>What I Learned</th>
+                        <th>Plan to Improve</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="mistakesTableBody">
+                    <!-- Table rows will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fas fa-lightbulb"></i>
+            <h3>No mistakes logged yet!</h3>
+            <p>Start your growth journey by logging your first mistake. Remember, every expert was once a beginner who learned from their mistakes.</p>
+            <button class="btn btn-primary" onclick="showAddForm()">
+                <i class="fas fa-plus"></i> Log Your First Mistake
+            </button>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
