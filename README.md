@@ -17,11 +17,11 @@ A comprehensive web application for tracking, analyzing, and learning from mista
 - Pattern detection for recurring issues
 - Progress celebration for resolved mistakes
 
-### 🎨 User Experience
-- Clean, modern interface
-- Responsive design for all devices
-- Modal forms for easy data entry
-- Hover effects and smooth animations
+### 🔐 Security Features
+- **Bearer Token Authentication**: Secure API access with configurable tokens
+- **File-based Key Management**: Upload key files or enter tokens manually
+- **CORS Protection**: Properly configured cross-origin resource sharing
+- **Input Validation**: Comprehensive server-side validation and sanitization
 
 ## Technology Stack
 
@@ -73,7 +73,22 @@ define('DB_NAME', 'mistake_tracker');
    - Visit: `http://localhost/mistakesnotes/php/test.php`
    - Check that all tests pass
 
-### Step 3: Access the Application
+### Step 3: Authentication Setup
+
+1. **Generate a bearer token**:
+   - Visit: `http://localhost/mistakesnotes/php/generate_token.php`
+   - Copy the generated token
+
+2. **Create authentication file**:
+   - Copy `php/auth.sample.php` to `php/auth.php`
+   - Replace the placeholder token with your generated token
+   - Save the file (it's automatically excluded from git)
+
+3. **Client authentication** (for users):
+   - Option A: Create a text file with the bearer token and upload it through the app
+   - Option B: Enter the bearer token directly in the authentication modal
+
+### Step 4: Access the Application
 
 Open your browser and navigate to:
 - XAMPP/WAMP: `http://localhost/mistakesnotes/`

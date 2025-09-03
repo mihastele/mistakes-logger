@@ -1,10 +1,12 @@
 <?php
 require_once 'config.php';
+require_once 'auth.php';
 
 // Enable CORS for frontend requests
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+header('Access-Control-Allow-Credentials: true');
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -26,6 +28,12 @@ if (!$pdo) {
 // Determine action
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
+// Check authentication for protected endpoints
+$protectedActions = ['add_mistake', 'update_mistake', 'delete_mistake'];
+if (in_array($action, $protectedActions)) {
+    requireAuth();
+}
+
 switch ($action) {
     case 'get_mistakes':
         getMistakes($pdo);
@@ -45,6 +53,10 @@ switch ($action) {
     
     case 'get_stats':
         getStats($pdo);
+        break;
+    
+    case 'test_auth':
+        testAuth();
         break;
     
     default:
@@ -191,5 +203,11 @@ function getStats($pdo) {
         error_log("Error getting statistics: " . $e->getMessage());
         sendJSONResponse(false, 'Error retrieving statistics');
     }
+}
+
+// Test authentication endpoint
+function testAuth() {
+    requireAuth();
+    sendJSONResponse(true, 'Authentication successful', ['authenticated' => true]);
 }
 ?>

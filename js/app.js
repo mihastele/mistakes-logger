@@ -1,31 +1,44 @@
 // Global variables
 let mistakes = [];
 let editingId = null;
+let bearerToken = null;
+let isAuthenticated = false;
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Set today's date as default
     document.getElementById('mistake_date').value = new Date().toISOString().split('T')[0];
-    
+
+    // Load saved bearer token from localStorage
+    loadSavedToken();
+
     // Load mistakes from database
     loadMistakes();
-    
+
     // Setup form submission
     document.getElementById('mistakeForm').addEventListener('submit', handleFormSubmit);
+
+    // Update auth status display
+    updateAuthStatus();
 });
 
 // Load mistakes from database
 async function loadMistakes() {
     try {
-        const response = await fetch('php/api.php?action=get_mistakes');
+        const response = await fetch('php/api.php?action=get_mistakes', {
+            headers: getAuthHeaders()
+        });
         const data = await response.json();
-        
+
         if (data.success) {
             mistakes = data.mistakes;
             renderMistakes();
             updateStats();
         } else {
             console.error('Error loading mistakes:', data.message);
+            if (data.error === 'AUTHENTICATION_REQUIRED') {
+                showAuthModal();
+            }
         }
     } catch (error) {
         console.error('Error loading mistakes:', error);
@@ -37,16 +50,16 @@ function renderMistakes() {
     const tbody = document.getElementById('mistakesTableBody');
     const emptyState = document.getElementById('emptyState');
     const tableContainer = document.querySelector('.table-container');
-    
+
     if (mistakes.length === 0) {
         emptyState.style.display = 'block';
         tableContainer.style.display = 'none';
         return;
     }
-    
+
     emptyState.style.display = 'none';
     tableContainer.style.display = 'block';
-    
+
     tbody.innerHTML = mistakes.map(mistake => `
         <tr>
             <td>${formatDate(mistake.mistake_date)}</td>
@@ -75,7 +88,7 @@ function updateStats() {
     const total = mistakes.length;
     const resolved = mistakes.filter(m => m.status === 'Resolved').length;
     const progressRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
-    
+
     document.getElementById('totalMistakes').textContent = total;
     document.getElementById('resolvedMistakes').textContent = resolved;
     document.getElementById('progressRate').textContent = progressRate + '%';
@@ -94,7 +107,7 @@ function showAddForm() {
 function editMistake(id) {
     const mistake = mistakes.find(m => m.id === id);
     if (!mistake) return;
-    
+
     editingId = id;
     document.getElementById('formTitle').textContent = 'Edit Mistake';
     document.getElementById('mistakeId').value = id;
@@ -105,7 +118,7 @@ function editMistake(id) {
     document.getElementById('what_learned').value = mistake.what_learned;
     document.getElementById('plan_improve').value = mistake.plan_improve;
     document.getElementById('status').value = mistake.status;
-    
+
     document.getElementById('formModal').style.display = 'block';
 }
 
@@ -114,23 +127,28 @@ async function deleteMistake(id) {
     if (!confirm('Are you sure you want to delete this mistake? This action cannot be undone.')) {
         return;
     }
-    
+
     try {
         const formData = new FormData();
         formData.append('action', 'delete_mistake');
         formData.append('id', id);
-        
+
         const response = await fetch('php/api.php', {
             method: 'POST',
+            headers: getAuthHeaders(),
             body: formData
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             loadMistakes(); // Reload the list
         } else {
-            alert('Error deleting mistake: ' + data.message);
+            if (data.error === 'AUTHENTICATION_REQUIRED') {
+                showAuthModal();
+            } else {
+                alert('Error deleting mistake: ' + data.message);
+            }
         }
     } catch (error) {
         console.error('Error deleting mistake:', error);
@@ -141,14 +159,14 @@ async function deleteMistake(id) {
 // Handle form submission
 async function handleFormSubmit(e) {
     e.preventDefault();
-    
+
     const formData = new FormData();
     formData.append('action', editingId ? 'update_mistake' : 'add_mistake');
-    
+
     if (editingId) {
         formData.append('id', editingId);
     }
-    
+
     formData.append('mistake_date', document.getElementById('mistake_date').value);
     formData.append('mistake_issue', document.getElementById('mistake_issue').value);
     formData.append('context_situation', document.getElementById('context_situation').value);
@@ -156,20 +174,25 @@ async function handleFormSubmit(e) {
     formData.append('what_learned', document.getElementById('what_learned').value);
     formData.append('plan_improve', document.getElementById('plan_improve').value);
     formData.append('status', document.getElementById('status').value);
-    
+
     try {
         const response = await fetch('php/api.php', {
             method: 'POST',
+            headers: getAuthHeaders(),
             body: formData
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             closeModal();
             loadMistakes(); // Reload the list
         } else {
-            alert('Error saving mistake: ' + data.message);
+            if (data.error === 'AUTHENTICATION_REQUIRED') {
+                showAuthModal();
+            } else {
+                alert('Error saving mistake: ' + data.message);
+            }
         }
     } catch (error) {
         console.error('Error saving mistake:', error);
@@ -180,16 +203,16 @@ async function handleFormSubmit(e) {
 // Filter mistakes
 function filterMistakes() {
     const statusFilter = document.getElementById('statusFilter').value;
-    
+
     // Show all mistakes if "all" is selected
     if (statusFilter === 'all') {
         renderMistakes();
         return;
     }
-    
+
     // Filter mistakes by status
     const filteredMistakes = mistakes.filter(mistake => mistake.status === statusFilter);
-    
+
     // Temporarily update the mistakes array for rendering
     const originalMistakes = mistakes;
     mistakes = filteredMistakes;
@@ -200,23 +223,23 @@ function filterMistakes() {
 // Show weekly review
 function showWeeklyReview() {
     const reviewContent = document.getElementById('reviewContent');
-    
+
     // Get mistakes from the last week
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    
-    const recentMistakes = mistakes.filter(mistake => 
+
+    const recentMistakes = mistakes.filter(mistake =>
         new Date(mistake.mistake_date) >= oneWeekAgo
     );
-    
+
     // Find patterns (group by similar issues)
     const patterns = findPatterns(mistakes);
-    
+
     // Find recently resolved mistakes
-    const recentlyResolved = mistakes.filter(mistake => 
+    const recentlyResolved = mistakes.filter(mistake =>
         mistake.status === 'Resolved' && new Date(mistake.mistake_date) >= oneWeekAgo
     );
-    
+
     let reviewHtml = `
         <div class="review-section">
             <h3><i class="fas fa-calendar-week"></i> This Week's Activity</h3>
@@ -224,7 +247,7 @@ function showWeeklyReview() {
             <p><strong>${recentlyResolved.length}</strong> mistakes resolved this week</p>
         </div>
     `;
-    
+
     if (patterns.length > 0) {
         reviewHtml += `
             <div class="review-section">
@@ -238,7 +261,7 @@ function showWeeklyReview() {
             </div>
         `;
     }
-    
+
     if (recentlyResolved.length > 0) {
         reviewHtml += `
             <div class="review-section">
@@ -252,7 +275,7 @@ function showWeeklyReview() {
             </div>
         `;
     }
-    
+
     if (recentMistakes.length === 0 && patterns.length === 0 && recentlyResolved.length === 0) {
         reviewHtml += `
             <div class="review-section">
@@ -261,7 +284,7 @@ function showWeeklyReview() {
             </div>
         `;
     }
-    
+
     reviewContent.innerHTML = reviewHtml;
     document.getElementById('reviewModal').style.display = 'block';
 }
@@ -269,13 +292,13 @@ function showWeeklyReview() {
 // Find patterns in mistakes
 function findPatterns(mistakes) {
     const categories = {};
-    
+
     mistakes.forEach(mistake => {
         const issue = mistake.mistake_issue.toLowerCase();
-        
+
         // Simple pattern detection based on keywords
         let category = 'Other';
-        
+
         if (issue.includes('input') || issue.includes('validation') || issue.includes('sanitiz')) {
             category = 'Input Validation';
         } else if (issue.includes('test') || issue.includes('testing')) {
@@ -291,10 +314,10 @@ function findPatterns(mistakes) {
         } else if (issue.includes('code') || issue.includes('logic') || issue.includes('algorithm')) {
             category = 'Code Logic';
         }
-        
+
         categories[category] = (categories[category] || 0) + 1;
     });
-    
+
     return Object.entries(categories)
         .filter(([category, count]) => count > 1)
         .map(([category, count]) => ({ category, count }))
@@ -310,6 +333,185 @@ function closeModal() {
 // Close review modal
 function closeReviewModal() {
     document.getElementById('reviewModal').style.display = 'none';
+}
+
+// Authentication Functions
+function loadSavedToken() {
+    const saved = localStorage.getItem('mistakeTracker_bearerToken');
+    if (saved) {
+        bearerToken = saved;
+        isAuthenticated = true;
+    }
+}
+
+function saveToken(token) {
+    bearerToken = token;
+    isAuthenticated = true;
+    localStorage.setItem('mistakeTracker_bearerToken', token);
+    updateAuthStatus();
+}
+
+function clearToken() {
+    bearerToken = null;
+    isAuthenticated = false;
+    localStorage.removeItem('mistakeTracker_bearerToken');
+    updateAuthStatus();
+}
+
+function getAuthHeaders() {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+
+    if (bearerToken) {
+        headers['Authorization'] = `Bearer ${bearerToken}`;
+    }
+
+    return headers;
+}
+
+function updateAuthStatus() {
+    const indicator = document.getElementById('authIndicator');
+    const button = document.getElementById('authButton');
+
+    if (isAuthenticated) {
+        indicator.textContent = '🔓 Authenticated';
+        indicator.className = 'auth-indicator authenticated';
+        button.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
+        button.onclick = logout;
+    } else {
+        indicator.textContent = '🔒 Not Authenticated';
+        indicator.className = 'auth-indicator not-authenticated';
+        button.innerHTML = '<i class="fas fa-key"></i> Enter API Key';
+        button.onclick = showAuthModal;
+    }
+}
+
+function showAuthModal() {
+    document.getElementById('authModal').style.display = 'block';
+    // Clear previous inputs
+    document.getElementById('bearerTokenInput').value = '';
+    document.getElementById('keyFileInput').value = '';
+    hideAuthMessage();
+}
+
+function closeAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout? You\'ll need to re-enter your API key.')) {
+        clearToken();
+        // Clear mistakes data
+        mistakes = [];
+        renderMistakes();
+        updateStats();
+    }
+}
+
+function handleKeyFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const content = e.target.result.trim();
+        if (content) {
+            document.getElementById('bearerTokenInput').value = content;
+            document.getElementById('fileInfo').style.display = 'block';
+            showAuthMessage('Key file loaded successfully. Click "Authenticate" to proceed.', 'info');
+        } else {
+            showAuthMessage('The selected file appears to be empty.', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+function toggleTokenVisibility() {
+    const input = document.getElementById('bearerTokenInput');
+    const icon = document.getElementById('eyeIcon');
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+async function authenticateUser() {
+    const token = document.getElementById('bearerTokenInput').value.trim();
+
+    if (!token) {
+        showAuthMessage('Please enter a bearer token or upload a key file.', 'error');
+        return;
+    }
+
+    // Test the token
+    try {
+        const response = await fetch('php/api.php?action=test_auth', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            saveToken(token);
+            showAuthMessage('Authentication successful!', 'success');
+            document.getElementById('testAuthBtn').style.display = 'inline-block';
+
+            // Auto-close modal after 2 seconds
+            setTimeout(() => {
+                closeAuthModal();
+                loadMistakes(); // Reload data with authentication
+            }, 2000);
+        } else {
+            showAuthMessage('Authentication failed: ' + data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Authentication error:', error);
+        showAuthMessage('Error during authentication. Please check your connection.', 'error');
+    }
+}
+
+async function testAuthentication() {
+    if (!bearerToken) {
+        showAuthMessage('No token available for testing.', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('php/api.php?action=test_auth', {
+            headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showAuthMessage('Connection test successful! Authentication is working.', 'success');
+        } else {
+            showAuthMessage('Connection test failed: ' + data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Test error:', error);
+        showAuthMessage('Connection test failed. Please check your network.', 'error');
+    }
+}
+
+function showAuthMessage(message, type) {
+    const messageEl = document.getElementById('authStatusMessage');
+    messageEl.textContent = message;
+    messageEl.className = `auth-status-message ${type}`;
+    messageEl.style.display = 'block';
+}
+
+function hideAuthMessage() {
+    document.getElementById('authStatusMessage').style.display = 'none';
+    document.getElementById('fileInfo').style.display = 'none';
+    document.getElementById('testAuthBtn').style.display = 'none';
 }
 
 // Helper functions
@@ -342,15 +544,20 @@ function getStatusClass(status) {
 }
 
 // Close modal when clicking outside
-window.onclick = function(event) {
+window.onclick = function (event) {
     const formModal = document.getElementById('formModal');
     const reviewModal = document.getElementById('reviewModal');
-    
+    const authModal = document.getElementById('authModal');
+
     if (event.target === formModal) {
         closeModal();
     }
-    
+
     if (event.target === reviewModal) {
         closeReviewModal();
+    }
+
+    if (event.target === authModal) {
+        closeAuthModal();
     }
 }
